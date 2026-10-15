@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>鉛直ばね振り子ラボ No.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: No.3と同じ実験台の構成。上に操作列・左に装置（鉛直）・下に時間グラフ・右に計測パネルと出来事の記録（狭い画面では縦積み） */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#1b2433; --muted:#5b6678; --line:#cfd6e0;
+  --ball:#d9781f; --cart:#2f5f9e; --cartfill:#dbe5f3; --plate:#6b5aa6; --platefill:#e6e1f4; --cm:#6c7686; --spring:#3a4352;
+  --accent:#2f5f9e; --accent-ink:#ffffff; --warn:#b5462b; --ok:#2a8a62; --ground:#9aa4b2; --gridline:#e2e7ee;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121821; --panel:#1a2230; --ink:#e6ebf2; --muted:#9aa6b8; --line:#2c3748;
+  --ball:#f0954a; --cart:#7aa7e6; --cartfill:#253650; --plate:#b3a5ec; --platefill:#2d2747; --cm:#a3adbd; --spring:#c6cfdc;
+  --accent:#7aa7e6; --accent-ink:#0f1620; --warn:#ef8467; --ok:#5cc59a; --ground:#5d6878; --gridline:#222c3b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121821; --panel:#1a2230; --ink:#e6ebf2; --muted:#9aa6b8; --line:#2c3748;
+  --ball:#f0954a; --cart:#7aa7e6; --cartfill:#253650; --plate:#b3a5ec; --platefill:#2d2747; --cm:#a3adbd; --spring:#c6cfdc;
+  --accent:#7aa7e6; --accent-ink:#0f1620; --warn:#ef8467; --ok:#5cc59a; --ground:#5d6878; --gridline:#222c3b; color-scheme:dark}
+html,body{height:auto}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 28px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+h1{font-size:1.45rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+.tag{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);letter-spacing:.06em}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-weight:700;border:0;background:transparent;color:var(--ink);padding:7px 14px;cursor:pointer;min-width:44px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg.small button{font-weight:400;padding:5px 10px;font-size:.9rem}
+.btn{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 16px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ball);outline-offset:2px}
+.grp{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lab{font-size:.82rem;color:var(--muted);letter-spacing:.04em}
+input[type=range]{accent-color:var(--accent);width:150px}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:14px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.stage{display:grid;gap:10px;min-width:0}
+canvas{display:block;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+#sim{aspect-ratio:16/9}
+#graph{aspect-ratio:16/5.2}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:12px;min-width:0}
+aside h2{font-size:1.02rem;margin:0}
+aside h3{font-size:.86rem;margin:0;color:var(--muted);letter-spacing:.04em}
+.desc{margin:0;font-size:.92rem}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:.88rem}
+dt{color:var(--muted)}
+dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.obs{margin:0;padding-left:1.1em;font-size:.88rem;display:grid;gap:4px}
+.theory{font-size:.85rem;border-top:1px dashed var(--line);padding-top:8px;color:var(--muted);display:grid;gap:2px}
+.theory b{color:var(--ink);font-family:var(--f-mono);font-weight:600}
+.events{margin:0;padding:0;list-style:none;font-size:.84rem;display:grid;gap:3px;max-height:11.5em;overflow:auto}
+.events li{display:grid;grid-template-columns:4.6em 1fr;gap:8px}
+.events time{font-family:var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.events .hot{color:var(--warn);font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.note{font-size:.8rem;color:var(--muted);margin:0}
+.hval{font-family:var(--f-mono);font-size:.85rem;min-width:6.5em}
+.chip{font-size:.75rem;border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--muted)}
+.chip.on{border-color:var(--ok);color:var(--ok)}
+</style>
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>鉛直ばね振り子と衝突　観察モデル</h1>
+    <span class="tag">湘南高校 物理 テーマ別演習 No.5</span>
+  </header>
+
+  <div class="controls" role="toolbar" aria-label="操作">
+    <div class="seg" id="modes" role="group" aria-label="部分の切り替え">
+      <button data-mode="A" aria-pressed="true">A</button>
+      <button data-mode="B" aria-pressed="false">B</button>
+      <button data-mode="C" aria-pressed="false">C</button>
+    </div>
+    <div class="grp">
+      <button class="btn primary" id="play">⏸ 一時停止</button>
+      <button class="btn" id="reset">↺ リセット</button>
+    </div>
+    <div class="grp">
+      <span class="lab">速さ</span>
+      <div class="seg small" id="speeds" role="group" aria-label="再生の速さ">
+        <button data-s="0.1" aria-pressed="false">⅒</button>
+        <button data-s="0.25" aria-pressed="false">¼</button>
+        <button data-s="0.5" aria-pressed="true">½</button>
+        <button data-s="1" aria-pressed="false">1</button>
+      </div>
+    </div>
+    <div class="grp">
+      <label class="lab" for="hgt">落とす高さ h</label>
+      <input type="range" id="hgt" min="1" max="80" step="0.5" value="4">
+      <span class="hval" id="hv">4 mg/k</span>
+    </div>
+    <div class="grp">
+      <span class="lab">表示</span>
+      <div class="seg small" role="group" aria-label="表示範囲">
+        <button id="cam-auto" aria-pressed="true">装置に寄る</button>
+        <button id="cam-all" aria-pressed="false">全体</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="stage">
+      <canvas id="sim" aria-label="板A・ばね・台B・小球Cの運動のアニメーション"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--ball)"></i>小球C　m</span>
+        <span><i style="background:var(--cart)"></i>台B　2m</span>
+        <span><i style="background:var(--plate)"></i>板A　2m</span>
+        <span id="lgG"><i style="background:var(--cm)"></i>AとBの重心</span>
+        <span class="lab">　グラフ：</span>
+        <div class="seg small" role="group" aria-label="グラフの量">
+          <button id="g-y" aria-pressed="true">位置</button>
+          <button id="g-v" aria-pressed="false">速度</button>
+          <button id="g-s" aria-pressed="false">ばねの縮み</button>
+        </div>
+      </div>
+      <canvas id="graph" aria-label="時間とともに変わる量のグラフ"></canvas>
+      <p class="note">上向きを正とする（問題の［A］は下向き正）。長さは mg/k を単位に表示。m = 1.0 kg，k = 98 N/m（mg/k = 0.10 m，台B単独の周期 T = 0.90 s），ばねの自然の長さ 14 mg/k。位置のグラフは，はじめの位置からの変位。</p>
+    </div>
+    <aside aria-live="polite">
+      <h2 id="ttl"></h2>
+      <p class="desc" id="desc"></p>
+      <dl>
+        <dt>時刻 t</dt><dd id="r-t">0.00 s</dd>
+        <dt>小球Cの速度</dt><dd id="r-vc"></dd>
+        <dt>台Bの速度</dt><dd id="r-vb"></dd>
+        <dt>板Aの速度</dt><dd id="r-va"></dd>
+        <dt id="r-sl">ばねの縮み</dt><dd id="r-s"></dd>
+        <dt>CがBから受ける力 N</dt><dd id="r-n"></dd>
+        <dt>床がAを押す力</dt><dd id="r-r"></dd>
+        <dt>力学的エネルギー</dt><dd id="r-e"></dd>
+      </dl>
+      <h3>できごと</h3>
+      <ul class="events" id="events"></ul>
+      <ul class="obs" id="obs"></ul>
+      <div class="theory" id="theory"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(()=>{
+const m=1, g=9.8, k=98, u=m*g/k, L0=14*u, T=2*Math.PI*Math.sqrt(2*m/k);
+const tA=0.07, tB=0.07, R=0.075;   // 描画用の厚さ・半径 [m]
+let mode='A', camAll=false, speed=0.5, playing=true, gq='y';
+let hU=4;                           // h（mg/k 単位）
+const defH={A:4,B:20,C:70};
+let S, hist=[], events=[];
+const $=id=>document.getElementById(id);
+const sim=$('sim'), gr=$('graph'), cs=sim.getContext('2d'), cg=gr.getContext('2d');
+let col={};
+function readColors(){const s=getComputedStyle(document.documentElement);
+  ['bg','panel','ink','muted','line','ball','cart','cartfill','plate','platefill','cm','spring','warn','ok','ground','gridline','accent'].forEach(n=>col[n]=s.getPropertyValue('--'+n).trim());}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readColors();draw();});
+new MutationObserver(()=>{readColors();draw();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+const font=()=>getComputedStyle(document.body).fontFamily;
+const mono=()=>getComputedStyle(document.body).getPropertyValue('--f-mono')||'monospace';
+
+// ---------- 物理 ----------
+function init(){
+  const yB0=L0-2*u;
+  S={t:0,yA:0,vA:0,onFloor:true,yB:yB0,vB:0,yC:yB0+hU*u,vC:0,contact:false,removed:false,remAt:null,
+     N:0,Rf:4*m*g,yB0, nColl:0,tColl1:null,lowest:false,sepDone:false,lift:false,prevVB:0};
+  hist=[];events=[];lastRec=0;camY=null;record();renderEvents();
+}
+const e=()=>mode==='A'?0.5:0;
+function ev(text,hot){events.push({t:S.t,text,hot});renderEvents();}
+function springC(){return L0-(S.yB-S.yA);}           // + = 縮み
+function step(dt){
+  const c=springC(), F=k*c;                           // F>0: Bを押し上げ，Aを押し下げる
+  let aB, aC=-g, aA=0;
+  if(S.contact && !S.removed){
+    const a=(F-3*m*g)/(3*m), N=m*(a+g);
+    if(N<0){ // 離れる
+      S.contact=false; S.N=0; aB=(F-2*m*g)/(2*m);
+      if(!S.sepDone){S.sepDone=true; ev(`CがBから離れる（ばねの${c>=0?'縮み':'伸び'} ${Math.abs(c/u).toFixed(2)} mg/k，C の速さ ${Math.abs(S.vC).toFixed(3)} m/s）`,true);}
+      if(mode==='C'){S.removed=true;S.remAt={y:S.yC,t:S.t}; ev('Cを手で受け止めて取り除く');}
+    } else {aB=a; aC=a; S.N=N;}
+  } else {aB=(F-2*m*g)/(2*m); S.N=0;}
+  // 板A
+  if(S.onFloor){
+    S.Rf=2*m*g+F + (S.contact&&!S.removed?0:0);
+    if(S.Rf<0){S.onFloor=false; S.Rf=0; ev(`Aが床から離れる（台Bの速さ ${Math.abs(S.vB).toFixed(3)} m/s）`,true);}
+  }
+  if(!S.onFloor){aA=(-F-2*m*g)/(2*m); S.Rf=0;}
+  // 積分
+  S.vB+=aB*dt; S.yB+=S.vB*dt;
+  if(!S.removed){ if(S.contact){S.vC=S.vB; S.yC=S.yB;} else {S.vC+=aC*dt; S.yC+=S.vC*dt;} }
+  if(!S.onFloor){S.vA+=aA*dt; S.yA+=S.vA*dt; if(S.yA<=0 && S.vA<0){S.yA=0;S.vA=0;S.onFloor=true; ev('Aが床に着く');}}
+  // 衝突
+  if(!S.removed && !S.contact && S.yC<=S.yB && S.vC<S.vB){
+    const vc=S.vC, vb=S.vB, P=m*vc+2*m*vb, rel=vc-vb;
+    const vcN=(P-2*m*e()*rel)/(3*m), vbN=vcN+e()*rel;
+    S.vC=vcN; S.vB=vbN; S.yC=S.yB; S.nColl++;
+    if(S.nColl===1){S.tColl1=S.t;
+      ev(`1回目の衝突（直前の C の速さ ${Math.abs(vc).toFixed(3)} m/s）→ C ${fv(vcN)}，B ${fv(vbN)}`,true);}
+    else if(S.nColl<=4) ev(`${S.nColl}回目の衝突（1回目から ${(S.t-S.tColl1).toFixed(3)} s 後${S.nColl===2&&mode==='A'?(S.lowest?'，Bの最下点より後':'，Bの最下点より前'):''}）`,S.nColl===2);
+    if(Math.abs(vcN-vbN)<0.03 || e()===0){S.contact=true; S.vC=S.vB=(mode==='A'?S.vB:vbN);}
+  }
+  // A：Bの最下点（1回目の衝突後，初めて下向き→上向き）
+  if(mode==='A' && S.tColl1!==null && !S.lowest && S.prevVB<0 && S.vB>=0){S.lowest=true; ev(`Bが最下点（1回目から ${(S.t-S.tColl1).toFixed(3)} s 後，T/4 = ${(T/4).toFixed(3)} s）`);}
+  S.prevVB=S.vB;
+  S.t+=dt;
+}
+function fv(v){if(Math.abs(v)<5e-4)v=0;return (v>=0?'+':'−')+Math.abs(v).toFixed(3)+' m/s';}
+function energy(){let E=0.5*2*m*S.vB**2+0.5*2*m*S.vA**2+0.5*k*springC()**2+2*m*g*S.yB+2*m*g*S.yA;
+  if(!S.removed)E+=0.5*m*S.vC**2+m*g*S.yC; return E;}
+let lastRec=0;
+function record(){hist.push({t:S.t,yC:S.removed?null:(S.yC-S.yB0)/u,yB:(S.yB-S.yB0)/u,yA:S.yA/u,
+  vC:S.removed?null:S.vC,vB:S.vB,vA:S.vA,s:springC()/u}); if(hist.length>5000)hist.shift();}
+
+// ---------- 描画 ----------
+let W=0,H=0,GW=0,GH=0,dpr=1,camY=null;
+function resize(){dpr=Math.min(2,window.devicePixelRatio||1);
+  const r=sim.getBoundingClientRect(); W=r.width;H=r.height; sim.width=W*dpr; sim.height=H*dpr; cs.setTransform(dpr,0,0,dpr,0,0);
+  const q=gr.getBoundingClientRect(); GW=q.width;GH=q.height; gr.width=GW*dpr; gr.height=GH*dpr; cg.setTransform(dpr,0,0,dpr,0,0); draw();}
+function draw(){ if(!S||!W)return; drawSim(); drawGraph(); readout(); }
+function drawSim(){
+  // 表示範囲（縦）
+  let top;
+  const bTop=S.yB+tB+0.35;
+  if(camAll) top=S.yB0+hU*u+tB+2*R+0.3;
+  else { top=Math.max(bTop, L0+4*u+tB+0.2); if(!S.removed) top=Math.max(top, S.yC+tB+2*R+0.25); }
+  top=Math.max(top,2.0);
+  if(camY===null) camY=top; else camY+=(top-camY)*0.12;
+  const bot=-0.18, sc=(H-26)/(camY-bot);
+  const cx=W*0.36, Y=y=>H-14-(y-bot)*sc, X=x=>cx+x*sc;
+  cs.fillStyle=col.panel; cs.fillRect(0,0,W,H);
+  // 床
+  const gy=Y(0); cs.strokeStyle=col.ground; cs.lineWidth=2; cs.beginPath(); cs.moveTo(0,gy); cs.lineTo(W,gy); cs.stroke();
+  cs.lineWidth=1; for(let x=0;x<W;x+=12){cs.beginPath();cs.moveTo(x,gy);cs.lineTo(x-7,gy+8);cs.stroke();}
+  // 目盛り（左，mg/k）
+  cs.fillStyle=col.muted; cs.strokeStyle=col.gridline; cs.font=`11px ${mono()}`;
+  const stepU = (camY-bot)/u>40?10:((camY-bot)/u>16?5:2);
+  for(let n=0;n*u<camY;n+=stepU){const y=Y(n*u); cs.beginPath();cs.moveTo(30,y);cs.lineTo(42,y);cs.stroke(); cs.fillText(String(n),6,y+4);}
+  cs.save();cs.translate(12,Y((camY)/2));cs.rotate(-Math.PI/2);cs.textAlign='center';cs.fillText('床からの高さ [mg/k]',0,0);cs.restore();cs.textAlign='left';
+  // 基準線（板Aに対する台Bの上面の位置）
+  const half=0.42*Math.max(1,1.6/((camY-bot)))*1, bw=Math.min(0.55*sc, W*0.13);
+  const lines=[{s:L0-3*u,t:'縮み 3mg/k：CとB一体のつりあい',m:'BC'},{s:L0-2*u,t:'縮み 2mg/k：B単独のつりあい',m:'ABC'},{s:L0,t:'自然の長さ：Cが離れる',m:'BC'},{s:L0+2*u,t:'伸び 2mg/k：Aが浮き上がる',m:'C'}];
+  cs.font=`12px ${font()}`;
+  lines.forEach(L=>{ if(!L.m.includes(mode))return; const y=Y(S.yA+L.s+tB);
+    cs.strokeStyle=L.s>L0?col.warn:(L.s===L0?col.accent:col.muted); cs.setLineDash([5,5]); cs.lineWidth=1;
+    cs.beginPath(); cs.moveTo(cx-bw-14,y); cs.lineTo(W-12,y); cs.stroke(); cs.setLineDash([]);
+    cs.fillStyle=cs.strokeStyle; const tx=cx+bw+R*sc+22; cs.fillText(L.t, Math.min(tx,W-12-cs.measureText(L.t).width), y-4);});
+  // 板A
+  const aw=bw*1.25;
+  cs.fillStyle=col.platefill; cs.strokeStyle=col.plate; cs.lineWidth=2;
+  cs.fillRect(cx-aw,Y(S.yA+tA),2*aw,tA*sc); cs.strokeRect(cx-aw,Y(S.yA+tA),2*aw,tA*sc);
+  cs.fillStyle=col.plate; cs.font=`bold 13px ${font()}`; cs.fillText('A',cx+aw+8,Y(S.yA+tA/2)+5);
+  // ばね
+  const y1=Y(S.yA+tA), y2=Y(S.yB), n=16, amp=Math.min(16,bw*0.35);
+  cs.strokeStyle=col.spring; cs.lineWidth=1.6; cs.beginPath(); cs.moveTo(cx,y1);
+  const a1=y1+(y2-y1)*0.06, a2=y1+(y2-y1)*0.94; cs.lineTo(cx,a1);
+  for(let i=1;i<n;i++) cs.lineTo(cx+(i%2?-amp:amp), a1+(a2-a1)*i/n); cs.lineTo(cx,a2); cs.lineTo(cx,y2); cs.stroke();
+  // 台B
+  cs.fillStyle=col.cartfill; cs.strokeStyle=col.cart; cs.lineWidth=2;
+  cs.fillRect(cx-bw,Y(S.yB+tB),2*bw,tB*sc); cs.strokeRect(cx-bw,Y(S.yB+tB),2*bw,tB*sc);
+  cs.fillStyle=col.cart; cs.font=`bold 13px ${font()}`; cs.fillText('B',cx+bw+8,Y(S.yB+tB/2)+5);
+  // 小球C
+  if(!S.removed){ const yc=Y(S.yC+tB+R); const top0=0;
+    if(yc>-R*sc){cs.beginPath(); cs.arc(cx,yc,Math.max(5,R*sc),0,Math.PI*2); cs.fillStyle=col.ball; cs.fill();
+      cs.fillStyle=col.panel; cs.font=`bold 12px ${font()}`; cs.textAlign='center'; cs.fillText('C',cx,yc+4); cs.textAlign='left';}
+    else { cs.fillStyle=col.ball; cs.font=`bold 12px ${font()}`; cs.fillText(`▲ C（高さ ${((S.yC)/u).toFixed(1)} mg/k）`,cx-40,14); }
+  } else if(S.remAt && S.t-S.remAt.t<1.2){
+    const al=1-(S.t-S.remAt.t)/1.2, yc=Y(S.remAt.y+tB+R);
+    cs.globalAlpha=al; cs.beginPath(); cs.arc(cx,yc,Math.max(5,R*sc),0,Math.PI*2); cs.fillStyle=col.ball; cs.fill();
+    cs.fillStyle=col.ink; cs.font=`12px ${font()}`; cs.fillText('手で取り除く',cx+R*sc+8,yc+4); cs.globalAlpha=1;
+  }
+  // N と 床の力の矢印
+  if(S.contact&&!S.removed&&S.N>0.01){ const yc=Y(S.yC+tB); arrow(cx-bw*0.6,yc,cx-bw*0.6,yc-Math.min(60,S.N*8),col.warn,'N'); }
+  if(!S.onFloor) { const gapPx=gy-Y(S.yA); cs.strokeStyle=col.warn; cs.fillStyle=col.warn; cs.lineWidth=1.5;
+    cs.beginPath(); cs.moveTo(cx-aw-18,gy); cs.lineTo(cx-aw-18,Y(S.yA)); cs.stroke();
+    cs.beginPath(); cs.moveTo(cx-aw-24,gy); cs.lineTo(cx-aw-12,gy); cs.moveTo(cx-aw-24,Y(S.yA)); cs.lineTo(cx-aw-12,Y(S.yA)); cs.stroke();
+    cs.font=`bold 13px ${font()}`; cs.textAlign='right'; cs.fillText(`Aが浮いている　すき間 ${(S.yA/u).toFixed(2)} mg/k`,cx-aw-28,Y(S.yA)-4); cs.textAlign='left';
+    const yg=Y((S.yA+S.yB)/2+ (tA+tB)/2*0); cs.fillStyle=col.cm; cs.beginPath(); cs.arc(cx+aw+28,yg,5,0,Math.PI*2); cs.fill(); cs.font=`12px ${font()}`; cs.fillText('G',cx+aw+36,yg+4);}
+  // 状態ラベル
+  cs.fillStyle=col.muted; cs.font=`12px ${font()}`; cs.textAlign='right';
+  cs.fillText(camAll?'表示：落とす位置まで全体':'表示：装置に寄る（Cが高いときは広がる）',W-12,18); cs.textAlign='left';
+}
+function arrow(x1,y1,x2,y2,c,t){cs.strokeStyle=c;cs.fillStyle=c;cs.lineWidth=2.5;cs.beginPath();cs.moveTo(x1,y1);cs.lineTo(x2,y2);cs.stroke();
+  const a=Math.atan2(y2-y1,x2-x1);cs.beginPath();cs.moveTo(x2,y2);cs.lineTo(x2-9*Math.cos(a-0.4),y2-9*Math.sin(a-0.4));cs.lineTo(x2-9*Math.cos(a+0.4),y2-9*Math.sin(a+0.4));cs.closePath();cs.fill();
+  cs.font=`bold 12px ${font()}`;cs.fillText(t,x2-16,y2+4);}
+// グラフ
+function drawGraph(){
+  cg.fillStyle=col.panel;cg.fillRect(0,0,GW,GH);
+  const pl=62,pr=12,pt=14,pb=26, w=GW-pl-pr, h=GH-pt-pb;
+  const span=6, t1=Math.max(span,S.t), t0=t1-span;
+  const keys=gq==='y'?[['yC',col.ball],['yB',col.cart],['yA',col.plate]]:gq==='v'?[['vC',col.ball],['vB',col.cart],['vA',col.plate]]:[['s',col.spring]];
+  let lo=Infinity,hi=-Infinity;
+  hist.forEach(p=>{if(p.t<t0)return; keys.forEach(([kk])=>{ if(kk==='yC')return; const v=p[kk]; if(v!==null){lo=Math.min(lo,v);hi=Math.max(hi,v);} });});
+  if(gq==='y'){hi=Math.max(hi+4,4); lo=Math.min(lo-1,-2);} else if(gq==='v'){ hist.forEach(p=>{if(p.t>=t0&&p.vC!==null){lo=Math.min(lo,p.vC);hi=Math.max(hi,p.vC);}}); lo=Math.min(lo,-0.5);hi=Math.max(hi,0.5);} else {lo=Math.min(lo,-1);hi=Math.max(hi,1);}
+  const stepv=gq==='v'?((hi-lo)>6?1:0.5):((hi-lo)>20?4:((hi-lo)>8?2:1)); lo=Math.floor(lo/stepv)*stepv; hi=Math.ceil(hi/stepv)*stepv;
+  const X=t=>pl+(t-t0)/span*w, Y=v=>pt+(hi-v)/(hi-lo)*h;
+  cg.font=`11px ${mono()}`; cg.strokeStyle=col.gridline;cg.fillStyle=col.muted;cg.lineWidth=1;
+  for(let v=lo;v<=hi+1e-9;v+=stepv){const y=Y(v);cg.beginPath();cg.moveTo(pl,y);cg.lineTo(pl+w,y);cg.stroke();cg.fillText(Math.abs(v)<1e-9?'0':v.toFixed(gq==='v'&&stepv<1?1:0),26,y+4);}
+  for(let t=Math.ceil(t0);t<=t1;t++){const x=X(t);cg.beginPath();cg.moveTo(x,pt);cg.lineTo(x,pt+h);cg.stroke();cg.fillText(t+' s',x-8,GH-8);}
+  cg.strokeStyle=col.muted;cg.beginPath();cg.moveTo(pl,Y(0));cg.lineTo(pl+w,Y(0));cg.stroke();
+  if(gq==='s'){ [[0,col.accent],[-2,col.warn]].forEach(([v,c])=>{ if(v<lo||v>hi)return; cg.strokeStyle=c;cg.setLineDash([4,4]);cg.beginPath();cg.moveTo(pl,Y(v));cg.lineTo(pl+w,Y(v));cg.stroke();cg.setLineDash([]);}); }
+  cg.save();cg.translate(14,pt+h/2);cg.rotate(-Math.PI/2);cg.fillStyle=col.muted;cg.textAlign='center';
+  cg.fillText(gq==='y'?'変位 [mg/k]':gq==='v'?'速度 [m/s]':'縮み [mg/k]',0,0);cg.restore();cg.textAlign='left';
+  cg.save(); cg.beginPath(); cg.rect(pl,pt,w,h); cg.clip();
+  keys.forEach(([kk,c])=>{cg.strokeStyle=c;cg.lineWidth=2.2;cg.beginPath();let f=true;
+    for(const p of hist){if(p.t<t0)continue; const v=p[kk]; if(v===null){f=true;continue;} const x=X(p.t),y=Y(v); f?cg.moveTo(x,y):cg.lineTo(x,y); f=false;} cg.stroke();});
+  cg.restore();
+}
+function readout(){
+  $('r-t').textContent=S.t.toFixed(2)+' s';
+  $('r-vc').textContent=S.removed?'（取り除いた）':fv(S.vC); $('r-vb').textContent=fv(S.vB); $('r-va').textContent=fv(S.vA);
+  const c=springC(); $('r-sl').textContent=c>=0?'ばねの縮み':'ばねの伸び'; $('r-s').textContent=(Math.abs(c)/u).toFixed(2)+' mg/k';
+  $('r-n').textContent=(S.contact&&!S.removed)?(S.N/(m*g)).toFixed(2)+' mg':'—';
+  $('r-r').textContent=(S.onFloor?(S.Rf/(m*g)).toFixed(2)+' mg':'0（浮いている）');
+  $('r-e').textContent=energy().toFixed(2)+' J';
+}
+function renderEvents(){ $('events').innerHTML=events.length?events.map(x=>`<li><time>${x.t.toFixed(3)} s</time><span class="${x.hot?'hot':''}">${x.text}</span></li>`).join(''):'<li><time>—</time><span>まだ何も起きていません</span></li>'; }
+
+// ---------- 説明 ----------
+function texts(){
+  const h=hU*u, v0=Math.sqrt(2*g*h), hc2=Math.PI**4/16;
+  const fmt=x=>x.toFixed(3);
+  const T_={
+   A:{t:'［A］反発係数 1/2 の衝突',d:'高さ h から小球Cを静かにはなし，台Bと反発係数 1/2 で衝突させる。',
+      o:['1回目の衝突直後，Cは空中で一瞬止まる（速度 0）。','Bは振動の中心（衝突位置）から下向きに振動を始める。','h を π⁴/16 ≈ 6.1 mg/k より小さくすると，2回目の衝突がBの最下点より前に起こる。「できごと」の時刻で比べられる。'],
+      th:[`衝突直前の C の速さ √(2gh) = <b>${fmt(v0)} m/s</b>`,`衝突直後の B の速さ v₀/2 = <b>${fmt(v0/2)} m/s</b>`,`振幅 √(mgh/k) = <b>${Math.sqrt(hU).toFixed(2)} mg/k</b>　最下点で床の力 <b>${(4+Math.sqrt(hU)).toFixed(2)} mg</b>`,`T/4 = <b>${(T/4).toFixed(3)} s</b>　最下点より前に衝突：h &lt; <b>${hc2.toFixed(2)} mg/k</b> <span class="chip ${hU<hc2?'on':''}">${hU<hc2?'満たす':'満たさない'}</span>`]},
+   B:{t:'［B］一体となる衝突とCの離脱',d:'高さ h からCを落とし，Bと一体にする。Cは台にのっているだけなので，離れることがある。',
+      o:['衝突後の振動の中心は縮み 3mg/k（点線）に移る。','N = kx/3 なので，ばねが自然の長さ（青の点線）にもどった瞬間に N = 0 となり，Cが離れる。','h ≤ 12 mg/k では C は離れず，一体のまま振動する。'],
+      th:[`一体の速さ v₀/3 = <b>${fmt(v0/3)} m/s</b>　失われたエネルギー (2/3)mgh = <b>${(2/3*m*g*h).toFixed(2)} J</b>`,`離れる条件 h &gt; <b>12 mg/k</b> <span class="chip ${hU>12?'on':''}">${hU>12?'満たす':'満たさない'}</span>`, hU>12?`離れる瞬間の速さ u = <b>${fmt(Math.sqrt(2*g*h/9-8*m*g*g/(3*k)))} m/s</b>`:'']},
+   C:{t:'［C］Cを取り除いた後の板Aの浮き上がり',d:'［B］と同じく一体にし，CがBから離れた直後にCを取り除く。その後の台Bと板Aを見る。',
+      o:['Cを取り除くと，振動の中心は縮み 2mg/k にもどる。','ばねの伸びが 2mg/k（赤の点線）をこえると，板Aが床から離れる。','浮いている間，AとBの重心 G は投げ上げ運動，AとBの間の距離は周期 2π√(m/k) で振動する（グラフを「ばねの縮み」に）。'],
+      th: hU>12?[`振幅 a = (2/3k)√(mg(kh−3mg)) = <b>${(2/3*Math.sqrt(hU-3)).toFixed(2)} mg/k</b>`,`浮き上がる条件 h &gt; <b>39 mg/k</b> <span class="chip ${hU>39?'on':''}">${hU>39?'満たす':'満たさない'}</span>`, hU>39?`浮く瞬間の B の速さ v₁ = <b>${fmt(Math.sqrt(2*g*(h-39*u)/9))} m/s</b>　最大の伸び <b>${(Math.sqrt(2*(hU-21))/3).toFixed(2)} mg/k</b>`:'',`浮いている間の周期 2π√(m/k) = <b>${(2*Math.PI*Math.sqrt(m/k)).toFixed(3)} s</b>`]:[`h ≤ 12 mg/k のため C は離れない（h を大きくしてください）`]}};
+  const x=T_[mode]; $('ttl').textContent=x.t; $('desc').textContent=x.d;
+  $('obs').innerHTML=x.o.map(s=>'<li>'+s+'</li>').join('');
+  $('theory').innerHTML=`<div>理論値（h = ${hU} mg/k）</div>`+x.th.filter(Boolean).map(s=>`<div>${s}</div>`).join('');
+  $('hv').textContent=hU+' mg/k';
+}
+// ---------- 操作 ----------
+function setPressed(btns,el){btns.forEach(b=>b.setAttribute('aria-pressed',b===el?'true':'false'));}
+document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;setPressed(document.querySelectorAll('#modes button'),b);
+  hU=defH[mode]; $('hgt').value=hU; texts();init();draw();}));
+document.querySelectorAll('#speeds button').forEach(b=>b.addEventListener('click',()=>{speed=+b.dataset.s;setPressed(document.querySelectorAll('#speeds button'),b);}));
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'⏸ 一時停止':'▶ 再生';last=performance.now();};
+$('reset').onclick=()=>{init();draw();};
+$('hgt').oninput=e=>{hU=+e.target.value;texts();init();draw();};
+$('cam-auto').onclick=()=>{camAll=false;setPressed([$('cam-auto'),$('cam-all')],$('cam-auto'));camY=null;draw();};
+$('cam-all').onclick=()=>{camAll=true;setPressed([$('cam-auto'),$('cam-all')],$('cam-all'));camY=null;draw();};
+[['g-y','y'],['g-v','v'],['g-s','s']].forEach(([id,q])=>$(id).onclick=()=>{gq=q;setPressed([$('g-y'),$('g-v'),$('g-s')],$(id));draw();});
+// ---------- ループ ----------
+let last=performance.now();
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){playing=false;$('play').textContent='▶ 再生';}
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(playing){const hs=0.0002; const n=Math.round(dt*speed/hs);
+    for(let i=0;i<n;i++){step(hs); if(S.t-lastRec>=1/200){record();lastRec=S.t;}}}
+  draw(); requestAnimationFrame(loop);
+}
+window.addEventListener('resize',resize);
+texts();init();resize();requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
